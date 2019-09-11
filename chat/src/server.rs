@@ -1,7 +1,8 @@
 use tokio::{
     codec::{FramedRead, LinesCodec},
     net::TcpStream,
-    sync::{mpsc, Lock},
+    sync::Lock,
+    io::AsyncWrite,
 };
 
 use futures::StreamExt;
@@ -9,7 +10,7 @@ use std::{collections::HashMap, net::SocketAddr};
 use tracing::{debug, info, trace_span, warn};
 use tracing_futures::Instrument;
 
-use super::peer::{Peer, PeerForward};
+use super::peer::{self, Peer};
 
 #[derive(Debug, Clone)]
 pub struct Server {
@@ -42,13 +43,13 @@ impl Server {
             }
         };
 
-        let rx = self.add_peer(addr).await;
         debug!(peer.name = %name);
-
         self.broadcast(addr, format!("{} ({}) joined the chat!", name, addr))
             .await;
 
-        tokio::spawn(PeerForward::new(write, rx).forward());
+        let forward = self.add_peer(addr, write).await;
+
+        tokio::spawn(forward.forward());
 
         while let Some(result) = read_lines.next().await {
             match result {
@@ -68,12 +69,14 @@ impl Server {
         }
     }
 
-    #[tracing::instrument]
-    async fn add_peer(&mut self, addr: SocketAddr) -> mpsc::UnboundedReceiver<String> {
+    async fn add_peer<W>(&mut self, addr: SocketAddr, write: W) -> peer::Forward<W>
+    where
+        W: AsyncWrite
+    {
+        let (peer, forward) = Peer::new(write);
         let mut peers = self.peers.lock().await;
-        let (tx, rx) = mpsc::unbounded_channel();
-        peers.insert(addr, Peer::new(tx));
-        rx
+        peers.insert(addr, peer);
+        forward
     }
 
     #[tracing::instrument]
