@@ -17,4 +17,3 @@ futures-preview = "=0.3.0-alpha.18"
 futures-util-preview = "=0.3.0-alpha.18"
 
 structopt = "0.3"
-crossterm_style = "0.4"
