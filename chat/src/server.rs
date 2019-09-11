@@ -1,15 +1,12 @@
 use tokio::{
-    codec::{FramedRead, FramedWrite, LinesCodec},
-    net::{
-        tcp::split::{TcpStreamReadHalf, TcpStreamWriteHalf},
-        TcpStream,
-    },
+    codec::{FramedRead, LinesCodec},
+    net::TcpStream,
     sync::{mpsc, Lock},
 };
 
-use futures::{Poll, SinkExt, Stream, StreamExt};
+use futures::StreamExt;
 use std::{collections::HashMap, net::SocketAddr};
-use tracing::{debug, info, trace, trace_span, warn};
+use tracing::{debug, info, trace_span, warn};
 use tracing_futures::Instrument;
 
 use super::peer::{Peer, PeerForward};
