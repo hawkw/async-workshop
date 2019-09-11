@@ -9,8 +9,8 @@ use tokio::{
 
 use futures::{Poll, SinkExt, Stream, StreamExt};
 use std::{collections::HashMap, net::SocketAddr};
+use tracing::{debug, info, trace, trace_span, warn};
 use tracing_futures::Instrument;
-use tracing::{trace, debug, warn, info, trace_span};
 
 use super::peer::{Peer, PeerForward};
 

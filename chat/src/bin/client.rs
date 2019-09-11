@@ -1,13 +1,12 @@
-
 use structopt::StructOpt;
 
-use tokio::{
-    net::TcpStream,
-    codec::{FramedRead, FramedWrite, LinesCodec},
-};
-use futures::{stream, StreamExt, TryStreamExt, SinkExt};
 use crossterm_style::{Colorize, Styler};
+use futures::{stream, SinkExt, StreamExt, TryStreamExt};
 use std::net::SocketAddr;
+use tokio::{
+    codec::{FramedRead, FramedWrite, LinesCodec},
+    net::TcpStream,
+};
 
 #[derive(Debug, StructOpt)]
 #[structopt(name = "client", about = "a simple chat client")]
@@ -34,7 +33,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let in_char = ">".bold().blue();
 
     let conn = TcpStream::connect(server).await?;
-    println!("{} connected to {}", in_char, server, );
+    println!("{} connected to {}", in_char, server,);
 
     let (read, write) = conn.split();
 
@@ -42,10 +41,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     send_lines.send(user).await?;
 
     let stdin = tokio::io::stdin();
-    let stdin_lines = FramedRead::new(stdin, LinesCodec::new())
-        .map_ok(Event::Input);
-    let recv_lines = FramedRead::new(read, LinesCodec::new())
-        .map_ok(Event::Recieved);
+    let stdin_lines = FramedRead::new(stdin, LinesCodec::new()).map_ok(Event::Input);
+    let recv_lines = FramedRead::new(read, LinesCodec::new()).map_ok(Event::Recieved);
     let mut events = stream::select(stdin_lines, recv_lines);
 
     while let Some(event) = events.next().await {
