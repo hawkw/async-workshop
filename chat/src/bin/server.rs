@@ -1,4 +1,4 @@
-#![feature(async_await)]
+
 use chat::server;
 
 use tokio::net::TcpListener;

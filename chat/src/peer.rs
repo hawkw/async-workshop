@@ -59,6 +59,8 @@ impl PeerForward {
                 }
             }
         }
+
         // The peer has disconnected, we can stop forwarding.
+        tracing::trace!("peer disconnected");
     }
 }
