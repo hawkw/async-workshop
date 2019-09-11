@@ -9,7 +9,7 @@ use tokio::{
 
 use futures::{Poll, SinkExt, Stream, StreamExt};
 use std::{collections::HashMap, error::Error, net::SocketAddr};
-use tracing::{trace, debug};
+use tracing::{debug, trace};
 
 pub struct PeerForward {
     io: FramedWrite<TcpStreamWriteHalf, LinesCodec>,

@@ -2,8 +2,11 @@ use std::net::SocketAddr;
 
 use tokio::net::TcpListener;
 use tracing::{info, trace_span};
-use tracing_subscriber::{FmtSubscriber, filter::{Filter, LevelFilter}};
 use tracing_futures::Instrument;
+use tracing_subscriber::{
+    filter::{Filter, LevelFilter},
+    FmtSubscriber,
+};
 
 use chat::server;
 #[tokio::main]
