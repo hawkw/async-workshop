@@ -1,14 +1,10 @@
 use tokio::{
-    codec::{FramedRead, FramedWrite, LinesCodec},
-    net::{
-        tcp::split::{TcpStreamReadHalf, TcpStreamWriteHalf},
-        TcpStream,
-    },
-    sync::{mpsc, Lock},
+    codec::{FramedWrite, LinesCodec},
+    net::tcp::split::TcpStreamWriteHalf,
+    sync::mpsc,
 };
 
-use futures::{Poll, SinkExt, Stream, StreamExt};
-use std::{collections::HashMap, error::Error, net::SocketAddr};
+use futures::{SinkExt, StreamExt};
 use tracing::{debug, trace};
 
 pub struct PeerForward {
