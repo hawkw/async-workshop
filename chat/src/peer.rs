@@ -8,7 +8,8 @@ use tokio::{
 };
 
 use futures::{Poll, SinkExt, Stream, StreamExt};
-
+use std::{collections::HashMap, error::Error, net::SocketAddr};
+use tracing::{trace, debug};
 
 pub struct PeerForward {
     io: FramedWrite<TcpStreamWriteHalf, LinesCodec>,
@@ -33,7 +34,11 @@ impl Peer {
     }
 
     pub async fn send(&mut self, msg: String) {
-        self.is_connected = self.tx.send(msg.to_owned()).await.is_ok();
+        if let Err(error) = self.tx.send(msg).await {
+            self.is_connected = false;
+            debug!(%error);
+        }
+        trace!(peer.is_connected = self.is_connected)
     }
 
     pub fn is_connected(&self) -> bool {
@@ -51,16 +56,17 @@ impl PeerForward {
 
     pub async fn forward(mut self) {
         while let Some(msg) = self.rx.next().await {
+            trace!(msg = msg.as_str(), "forwarding...");
             match self.io.send(msg).await {
                 Ok(_) => {}
                 Err(error) => {
-                    tracing::warn!(%error, "error sending to peer");
+                    debug!(%error, "error sending to peer");
                     return;
                 }
             }
         }
 
         // The peer has disconnected, we can stop forwarding.
-        tracing::trace!("peer disconnected");
+        debug!("peer disconnected");
     }
 }
