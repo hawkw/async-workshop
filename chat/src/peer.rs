@@ -8,7 +8,7 @@ use tokio::{
 };
 
 use futures::{Poll, SinkExt, Stream, StreamExt};
-use std::{collections::HashMap, error::Error, net::SocketAddr};
+
 
 pub struct PeerForward {
     io: FramedWrite<TcpStreamWriteHalf, LinesCodec>,

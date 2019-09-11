@@ -8,7 +8,7 @@ use tokio::{
 };
 
 use futures::{Poll, SinkExt, Stream, StreamExt};
-use std::{collections::HashMap, error::Error, net::SocketAddr};
+use std::{collections::HashMap, net::SocketAddr};
 
 use super::peer::{Peer, PeerForward};
 
@@ -27,7 +27,7 @@ impl Server {
     }
 
     pub async fn serve_connection(mut self, connection: TcpStream, addr: SocketAddr) {
-        let (mut read, write) = connection.split();
+        let (read, write) = connection.split();
         let mut read_lines = FramedRead::new(read, LinesCodec::new());
 
         // The first line recieved from the peer is that peer's username.

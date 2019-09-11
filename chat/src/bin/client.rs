@@ -12,7 +12,7 @@ use tokio::{
     },
     codec::{FramedRead, FramedWrite, LinesCodec},
 };
-use futures::{stream, Stream, StreamExt, TryStreamExt, SinkExt, FutureExt};
+use futures::{stream, StreamExt, TryStreamExt, SinkExt, FutureExt};
 use crossterm_style::{Colorize, Styler};
 
 #[derive(Debug, StructOpt)]
