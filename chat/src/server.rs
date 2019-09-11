@@ -61,15 +61,7 @@ impl Server {
 
         // For each line received from the peer, broadcast that line to all the
         // other peers.
-        while let Some(result) = read_lines.next().await {
-            match result {
-                Ok(message) => self.broadcast(addr, format!("{}: {}", name, message)).await,
-                Err(error) => {
-                    warn!(%error, peer.name = %name);
-                    break;
-                }
-            }
-        }
+        unimplemented!()
 
         // When the stream ends, the peer has disconnected. Remove it from the
         // map and let everyone else know.
@@ -96,16 +88,8 @@ impl Server {
     async fn broadcast(&mut self, from: SocketAddr, msg: String) {
         debug!("broadcasting...");
 
-        let mut peers = self.peers.lock().await;
-
-        for (&addr, peer) in peers.iter_mut() {
-            if addr == from {
-                continue;
-            }
-
-            peer.send(msg.clone())
-                .instrument(trace_span!("send_to", peer = %addr))
-                .await;
-        }
+        // Implement `broadcast` by sending the message to each other peer in
+        // `self.peers.
+        unimplemented!();
     }
 }
