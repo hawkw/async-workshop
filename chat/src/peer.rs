@@ -8,28 +8,24 @@ use futures::{Sink, SinkExt, StreamExt};
 use tracing::{debug, trace};
 use std::fmt;
 
-pub struct Forward<W> {
-    io: FramedWrite<W, LinesCodec>,
-    rx: Receiver,
+pub struct Forward {
+    rx: mpsc::UnboundedReceiver<String>,
 }
 
 #[derive(Debug)]
 pub struct Peer {
     is_connected: bool,
-    tx: Sender,
+    tx: mpsc::UnboundedSender<String>,
 }
 
-type Sender = mpsc::UnboundedSender<String>;
-type Receiver = mpsc::UnboundedReceiver<String>;
-
 impl Peer {
-    pub fn new<W: AsyncWrite>(write: W) -> (Self, Forward<W>) {
+    pub fn new() -> (Self, Forward) {
         let (tx, rx) = mpsc::unbounded_channel();
         let peer = Self {
             tx,
             is_connected: true,
         };
-        let forward = Forward::new(write, rx);
+        let forward = Forward { rx };
         (peer, forward)
     }
 
@@ -46,23 +42,18 @@ impl Peer {
     }
 }
 
-impl<W: AsyncWrite> Forward<W> {
-    fn new(write: W, rx: mpsc::UnboundedReceiver<String>) -> Self {
-        Self {
-            io: FramedWrite::new(write, LinesCodec::new()),
-            rx,
-        }
-    }
-
-    pub async fn forward(mut self)
+impl Forward {
+    pub async fn forward_to<W>(mut self, write: W)
     where
-        W: Unpin,
+        W: AsyncWrite + Unpin,
         FramedWrite<W, LinesCodec>: Sink<String>,
         <FramedWrite<W, LinesCodec> as Sink<String>>::Error: fmt::Display,
     {
+        let mut lines = FramedWrite::new(write, LinesCodec::new());
+
         while let Some(msg) = self.rx.next().await {
             trace!(msg = msg.as_str(), "forwarding...");
-            match self.io.send(msg).await {
+            match lines.send(msg).await {
                 Ok(_) => {}
                 Err(error) => {
                     debug!(%error, "error sending to peer");
