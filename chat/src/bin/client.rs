@@ -1,19 +1,13 @@
 
 use structopt::StructOpt;
-use std::{
-    fmt,
-    net::SocketAddr,
-    str::FromStr,
-};
 
 use tokio::{
-    net::{
-        TcpStream,
-    },
+    net::TcpStream,
     codec::{FramedRead, FramedWrite, LinesCodec},
 };
-use futures::{stream, StreamExt, TryStreamExt, SinkExt, FutureExt};
+use futures::{stream, StreamExt, TryStreamExt, SinkExt};
 use crossterm_style::{Colorize, Styler};
+use std::net::SocketAddr;
 
 #[derive(Debug, StructOpt)]
 #[structopt(name = "client", about = "a simple chat client")]

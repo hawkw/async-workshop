@@ -9,6 +9,8 @@ use tokio::{
 
 use futures::{Poll, SinkExt, Stream, StreamExt};
 use std::{collections::HashMap, net::SocketAddr};
+use tracing_futures::Instrument;
+use tracing::{trace, debug, warn, info, trace_span};
 
 use super::peer::{Peer, PeerForward};
 
@@ -34,17 +36,17 @@ impl Server {
         let name = match read_lines.next().await {
             Some(Ok(name)) => name,
             Some(Err(error)) => {
-                tracing::warn!(peer.addr = %addr, %error, "an error occurred before the peer sent a username");
+                warn!(%error, "an error occurred before the peer sent a username");
                 return;
             }
             None => {
-                tracing::warn!(peer.addr = %addr, "peer disconnected without sending a username");
+                info!("peer disconnected before sending a username");
                 return;
             }
         };
 
         let rx = self.add_peer(addr).await;
-        tracing::debug!(peer.addr = %addr, peer.name = %name, "peer connected");
+        debug!(peer.name = %name);
 
         self.broadcast(addr, format!("{} ({}) joined the chat!", name, addr))
             .await;
@@ -55,7 +57,7 @@ impl Server {
             match result {
                 Ok(message) => self.broadcast(addr, format!("{}: {}", name, message)).await,
                 Err(error) => {
-                    tracing::warn!(%error, peer.name = %name, "peer disconnected");
+                    debug!(%error, peer.name = %name);
                 }
             }
         }
@@ -79,16 +81,17 @@ impl Server {
 
     #[tracing::instrument]
     async fn broadcast(&mut self, from: SocketAddr, msg: String) {
-        tracing::debug!("broadcasting...");
+        debug!("broadcasting...");
 
         let mut peers = self.peers.lock().await;
         for (&addr, peer) in peers.iter_mut() {
             if addr == from {
                 continue;
             }
-            peer.send(msg.clone()).await;
 
-            tracing::trace!(peer.addr = %addr, peer.is_connected = peer.is_connected());
+            peer.send(msg.clone())
+                .instrument(trace_span!("send_to", peer = %addr))
+                .await;
         }
         peers.retain(|_, peer| peer.is_connected());
     }
