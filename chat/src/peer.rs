@@ -14,35 +14,29 @@ pub struct Forward {
 
 #[derive(Debug)]
 pub struct Peer {
-    is_connected: bool,
     tx: mpsc::UnboundedSender<String>,
 }
 
 impl Peer {
+    // Returns a new `Peer` handle to send messages to this peer, and a
+    // `Forward` that forwards those messages on the peer's connection.
     pub fn new() -> (Self, Forward) {
         let (tx, rx) = mpsc::unbounded_channel();
-        let peer = Self {
-            tx,
-            is_connected: true,
-        };
+        let peer = Self { tx, };
         let forward = Forward { rx };
         (peer, forward)
     }
 
+    /// Send a message on this peer's channel.
     pub async fn send(&mut self, msg: String) {
         if let Err(error) = self.tx.send(msg).await {
-            self.is_connected = false;
             debug!(%error);
         }
-        trace!(peer.is_connected = self.is_connected)
-    }
-
-    pub fn is_connected(&self) -> bool {
-        self.is_connected
     }
 }
 
 impl Forward {
+    /// Forward each line recieved from the `Peer` to the provided AsyncWrite.
     pub async fn forward_to<W>(mut self, write: W)
     where
         W: AsyncWrite + Unpin,
