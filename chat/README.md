@@ -47,13 +47,13 @@ started, as well as some comments.
 You can run the client with
 
 ```bash
-cargo run --bin client -- <USERNAME>
+cargo -p client run -- <USERNAME>
 ```
 
 or
 
 ```bash
-cargo run --bin client -- <USERNAME> --server <SERVER_IP>:<SERVER_PORT>
+cargo -p client run  -- <USERNAME> --server <SERVER_IP>:<SERVER_PORT>
 ```
 
 to connect to the server running on a specific address.
