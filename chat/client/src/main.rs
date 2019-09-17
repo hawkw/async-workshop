@@ -1,6 +1,6 @@
 use structopt::StructOpt;
 
-use futures::{Stream, Sink, SinkExt, StreamExt, TryStream, TryStreamExt};
+use futures::{stream, Stream, Sink, SinkExt, StreamExt, TryStream, TryStreamExt};
 use std::net::SocketAddr;
 use tokio::{
     codec::{FramedRead, FramedWrite, LinesCodec},
@@ -47,6 +47,12 @@ fn lines_from_stdin() -> impl Stream<Item = Result<String, Error>> {
     FramedRead::new(stdin, LinesCodec::new()).err_into()
 }
 
+#[derive(Debug)]
+enum Event {
+    Received(String),
+    Input(String),
+}
+
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Parse command line options.
@@ -54,7 +60,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Try to connect to the server, returning a `TcpStream`.
     let conn = TcpStream::connect(server).await?;
-    println!("connected to {}", server);
+    println!("> connected to {}", server);
 
     // Split the raw `TcpStream` of bytes into a `Stream` of received lines and
     // a sink that we can write lines to send to.
@@ -69,7 +75,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     while let Some(event) = events.try_next().await? {
         match event {
-            Event::Received(s) => println!("{} {}", in_char, s),
+            Event::Received(s) => println!("> {}", s),
             Event::Input(s) => send_lines.send(s).await?,
         }
     }
