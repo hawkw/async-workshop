@@ -63,9 +63,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Start by sending the server our username.
     send_lines.send(user).await?;
 
-    // Now you try! To finish implementing the client, we'll need to
-    // continuously read from stdin and from `recv_lines`. When we receive a
-    // line from stdin, we'll need to write that line to `send_lines`. When we
-    // receive a line from `read_lines`, we need to print that to stdout.
-    unimplemented!()
+    let stdin_lines = lines_from_stdin().map_ok(Event::Input);
+    let recv_lines = recv_lines.map_ok(Event::Received);
+    let mut events = stream::select(stdin_lines, recv_lines);
+
+    while let Some(event) = events.try_next().await? {
+        match event {
+            Event::Received(s) => println!("{} {}", in_char, s),
+            Event::Input(s) => send_lines.send(s).await?,
+        }
+    }
+    Ok(())
 }

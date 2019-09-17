@@ -8,7 +8,11 @@ use tracing_subscriber::{
     FmtSubscriber,
 };
 
-use chat::server;
+mod peer;
+mod server;
+
+use server::Server;
+
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let subscriber = FmtSubscriber::builder()
@@ -20,7 +24,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut listener = TcpListener::bind(addr).await?;
     info!(local.addr = %addr, "listening on");
 
-    let server = server::Server::new();
+    let server = Server::new();
 
     loop {
         let (socket, addr) = listener.accept().await?;

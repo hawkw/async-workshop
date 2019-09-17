@@ -46,8 +46,8 @@ impl Server {
         };
 
         // Tell everyone that a new peer has joined the chat.
-        self.broadcast(addr, format!("{} ({}) joined the chat!", name, addr))
-            .await;
+        let msg = format!("{} ({}) joined the chat!", name, addr);
+        self.broadcast(addr, msg).await;
         debug!(peer.name = %name);
 
         // Insert the new peer into our map of peers,returning a handle that
@@ -58,15 +58,23 @@ impl Server {
         // broadcast to that peer.
         tokio::spawn(forward.forward_to(write));
 
-
-        // TODO For each line received from the peer, broadcast that line to all the
-        // other peers.
-        unimplemented!();
+        while let Some(result) = read_lines.next().await {
+            match result {
+                Ok(message) => {
+                    let msg = format!("{}: {}", name, message);
+                    self.broadcast(addr, msg).await;
+                }
+                Err(error) => {
+                    debug!(%error, peer.name = %name);
+                }
+            }
+        }
 
         // When the stream ends, the peer has disconnected. Remove it from the
         // map and let everyone else know.
         self.remove_peer(addr).await;
-        self.broadcast(addr, format!("{} ({}) left the chat!", name, addr)).await;
+        let msg = format!("{} ({}) left the chat!", name, addr);
+        self.broadcast(addr, msg).await;
     }
 
     /// Add a new peer to the server, returning a task that will forward
@@ -88,8 +96,15 @@ impl Server {
     async fn broadcast(&mut self, from: SocketAddr, msg: String) {
         debug!("broadcasting...");
 
-        // Implement `broadcast` by sending the message to each other peer in
-        // `self.peers.
-        unimplemented!();
+        let mut peers = self.peers.lock().await;
+        for (&addr, peer) in peers.iter_mut() {
+            if addr == from {
+                continue;
+            }
+
+            peer.send(msg.clone())
+                .instrument(trace_span!("send_to", peer = %addr))
+                .await;
+        }
     }
 }
