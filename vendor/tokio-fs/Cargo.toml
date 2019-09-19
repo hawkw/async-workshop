@@ -13,11 +13,11 @@
 [package]
 edition = "2018"
 name = "tokio-fs"
-version = "0.2.0-alpha.4"
+version = "0.2.0-alpha.5"
 authors = ["Tokio Contributors <team@tokio.rs>"]
 description = "Filesystem API for Tokio.\n"
 homepage = "https://tokio.rs"
-documentation = "https://docs.rs/tokio-fs/0.2.0-alpha.4/tokio_fs"
+documentation = "https://docs.rs/tokio-fs/0.2.0-alpha.5/tokio_fs"
 readme = "README.md"
 keywords = ["tokio", "futures", "fs", "file", "async"]
 categories = ["asynchronous", "network-programming", "filesystem"]
@@ -35,12 +35,12 @@ version = "=0.3.0-alpha.18"
 version = "1.3.0"
 
 [dependencies.tokio-executor]
-version = "=0.2.0-alpha.4"
+version = "=0.2.0-alpha.5"
 features = ["blocking"]
 
 [dependencies.tokio-io]
-version = "=0.2.0-alpha.4"
+version = "=0.2.0-alpha.5"
 features = ["util"]
 
 [dependencies.tokio-sync]
-version = "=0.2.0-alpha.4"
+version = "=0.2.0-alpha.5"

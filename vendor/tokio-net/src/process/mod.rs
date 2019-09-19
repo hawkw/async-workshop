@@ -1,6 +1,6 @@
 //! An implementation of asynchronous process management for Tokio.
 //!
-//! This module provides a [`Command`](Command) struct that imitates the interface of the
+//! This module provides a [`Command`](crate::process::Command) struct that imitates the interface of the
 //! [`std::process::Command`] type in the standard library, but provides asynchronous versions of
 //! functions that create processes. These functions (`spawn`, `status`, `output` and their
 //! variants) return "future aware" types that interoperate with Tokio. The asynchronous process
@@ -101,15 +101,18 @@
 //! While similar to the standard library, this crate's `Child` type differs
 //! importantly in the behavior of `drop`. In the standard library, a child
 //! process will continue running after the instance of [`std::process::Child`]
-//! is dropped. In this crate, however, because [`tokio_net::process::Child`](Child) is a
+//! is dropped. In this crate, however, because [`tokio_net::process::Child`](crate::process::Child) is a
 //! future of the child's `ExitStatus`, a child process is terminated if
 //! `tokio_net::process::Child` is dropped. The behavior of the standard library can
-//! be regained with the [`Child::forget`] method.
+//! be regained with the [`Child::forget`](crate::process::Child::forget) method.
 
 use std::ffi::OsStr;
-use std::fmt;
 use std::future::Future;
 use std::io;
+#[cfg(unix)]
+use std::os::unix::process::CommandExt;
+#[cfg(windows)]
+use std::os::windows::process::CommandExt;
 use std::path::Path;
 use std::pin::Pin;
 use std::process::{Command as StdCommand, ExitStatus, Output, Stdio};
@@ -118,9 +121,7 @@ use std::task::Poll;
 
 use self::kill::Kill;
 use futures_core::TryFuture;
-use futures_util::future;
-use futures_util::future::FutureExt;
-use futures_util::try_future::TryFutureExt;
+use futures_util::try_future::try_join3;
 use tokio_io::{AsyncRead, AsyncReadExt, AsyncWrite};
 
 #[path = "unix/mod.rs"]
@@ -439,6 +440,72 @@ impl Command {
         self
     }
 
+    /// Sets the [process creation flags][1] to be passed to `CreateProcess`.
+    ///
+    /// These will always be ORed with `CREATE_UNICODE_ENVIRONMENT`.
+    ///
+    /// [1]: https://msdn.microsoft.com/en-us/library/windows/desktop/ms684863(v=vs.85).aspx
+    #[cfg(windows)]
+    pub fn creation_flags(&mut self, flags: u32) -> &mut Command {
+        self.std.creation_flags(flags);
+        self
+    }
+
+    /// Sets the child process's user ID. This translates to a
+    /// `setuid` call in the child process. Failure in the `setuid`
+    /// call will cause the spawn to fail.
+    #[cfg(unix)]
+    pub fn uid(&mut self, id: u32) -> &mut Command {
+        self.std.uid(id);
+        self
+    }
+
+    /// Similar to `uid`, but sets the group ID of the child process. This has
+    /// the same semantics as the `uid` field.
+    #[cfg(unix)]
+    pub fn gid(&mut self, id: u32) -> &mut Command {
+        self.std.gid(id);
+        self
+    }
+
+    /// Schedules a closure to be run just before the `exec` function is
+    /// invoked.
+    ///
+    /// The closure is allowed to return an I/O error whose OS error code will
+    /// be communicated back to the parent and returned as an error from when
+    /// the spawn was requested.
+    ///
+    /// Multiple closures can be registered and they will be called in order of
+    /// their registration. If a closure returns `Err` then no further closures
+    /// will be called and the spawn operation will immediately return with a
+    /// failure.
+    ///
+    /// # Notes and Safety
+    ///
+    /// This closure will be run in the context of the child process after a
+    /// `fork`. This primarily means that any modifications made to memory on
+    /// behalf of this closure will **not** be visible to the parent process.
+    /// This is often a very constrained environment where normal operations
+    /// like `malloc` or acquiring a mutex are not guaranteed to work (due to
+    /// other threads perhaps still running when the `fork` was run).
+    ///
+    /// This also means that all resources such as file descriptors and
+    /// memory-mapped regions got duplicated. It is your responsibility to make
+    /// sure that the closure does not violate library invariants by making
+    /// invalid use of these duplicates.
+    ///
+    /// When this closure is run, aspects such as the stdio file descriptors and
+    /// working directory have successfully been changed, so output to these
+    /// locations may not appear where intended.
+    #[cfg(unix)]
+    pub unsafe fn pre_exec<F>(&mut self, f: F) -> &mut Command
+    where
+        F: FnMut() -> io::Result<()> + Send + Sync + 'static,
+    {
+        self.std.pre_exec(f);
+        self
+    }
+
     /// Executes the command as a child process, returning a handle to it.
     ///
     /// By default, stdin, stdout and stderr are inherited from the parent.
@@ -479,23 +546,19 @@ impl Command {
     /// collecting its exit status.
     ///
     /// By default, stdin, stdout and stderr are inherited from the parent.
-    ///
-    /// The `StatusAsync` future returned will resolve to the `ExitStatus`
-    /// type in the standard library representing how the process exited. If
-    /// any input/output handles are set to a pipe then they will be immediately
-    ///  closed after the child is spawned.
+    /// If any input/output handles are set to a pipe then they will be immediately
+    /// closed after the child is spawned.
     ///
     /// All I/O this child does will be associated with the current default
     /// event loop.
     ///
-    /// If the `StatusAsync` future is dropped before the future resolves, then
+    /// If this future is dropped before the future resolves, then
     /// the child will be killed, if it was spawned.
     ///
     /// # Errors
     ///
-    /// This function will return an error immediately if the child process
-    /// cannot be spawned. Otherwise errors obtained while waiting for the child
-    /// are returned through the `StatusAsync` future.
+    /// This future will return an error if the child process cannot be spawned
+    /// or if there is an error while awaiting its status.
     ///
     /// # Examples
     ///
@@ -507,12 +570,15 @@ impl Command {
     /// async fn run_ls() -> std::process::ExitStatus {
     ///     Command::new("ls")
     ///         .status()
-    ///         .expect("ls command failed to start")
     ///         .await
     ///         .expect("ls command failed to run")
     /// }
-    pub fn status(&mut self) -> io::Result<StatusAsync> {
-        self.spawn().map(|mut child| {
+    pub fn status(&mut self) -> impl Future<Output = io::Result<ExitStatus>> {
+        let child = self.spawn();
+
+        async {
+            let mut child = child?;
+
             // Ensure we close any stdio handles so we can't deadlock
             // waiting on the child which may be waiting to read/write
             // to a pipe we're holding.
@@ -520,8 +586,8 @@ impl Command {
             child.stdout.take();
             child.stderr.take();
 
-            StatusAsync { inner: child }
-        })
+            child.await
+        }
     }
 
     /// Executes the command as a child process, waiting for it to finish and
@@ -534,7 +600,7 @@ impl Command {
     /// > `wait_with_output` method on child.
     ///
     /// This method will return a future representing the collection of the
-    /// child process's stdout/stderr. The `OutputAsync` future will resolve to
+    /// child process's stdout/stderr. It will resolve to
     /// the `Output` type in the standard library, containing `stdout` and
     /// `stderr` as `Vec<u8>` along with an `ExitStatus` representing how the
     /// process exited.
@@ -542,7 +608,7 @@ impl Command {
     /// All I/O this child does will be associated with the current default
     /// event loop.
     ///
-    /// If the `OutputAsync` future is dropped before the future resolves, then
+    /// If this future is dropped before the future resolves, then
     /// the child will be killed, if it was spawned.
     ///
     /// # Examples
@@ -559,15 +625,19 @@ impl Command {
     ///         .expect("ls command failed to run");
     ///     println!("stderr of ls: {:?}", output.stderr);
     /// }
-    pub fn output(&mut self) -> OutputAsync {
+    pub fn output(&mut self) -> impl Future<Output = io::Result<Output>> {
         self.std.stdout(Stdio::piped());
         self.std.stderr(Stdio::piped());
 
-        let inner = future::ready(self.spawn()).and_then(Child::wait_with_output);
+        let child = self.spawn();
 
-        OutputAsync {
-            inner: inner.boxed(),
-        }
+        async { child?.wait_with_output().await }
+    }
+}
+
+impl From<StdCommand> for Command {
+    fn from(std: StdCommand) -> Command {
+        Command { std }
     }
 }
 
@@ -696,42 +766,26 @@ impl Child {
     /// order to capture the output into this `Output` it is necessary to create
     /// new pipes between parent and child. Use `stdout(Stdio::piped())` or
     /// `stderr(Stdio::piped())`, respectively, when creating a `Command`.
-    pub fn wait_with_output(mut self) -> WaitWithOutput {
-        drop(self.stdin().take());
-        let stdout_val = self.stdout.take();
-        let stderr_val = self.stderr.take();
-        let stdout_fut = async {
-            match stdout_val {
-                Some(mut io) => {
-                    let mut vec = Vec::new();
-                    AsyncReadExt::read_to_end(&mut io, &mut vec).await?;
-                    Ok(vec)
-                }
-                None => Ok(Vec::new()),
+    pub async fn wait_with_output(mut self) -> io::Result<Output> {
+        async fn read_to_end<A: AsyncRead + Unpin>(io: Option<A>) -> io::Result<Vec<u8>> {
+            let mut vec = Vec::new();
+            if let Some(mut io) = io {
+                AsyncReadExt::read_to_end(&mut io, &mut vec).await?;
             }
-        };
-        let stderr_fut = async {
-            match stderr_val {
-                Some(mut io) => {
-                    let mut vec = Vec::new();
-                    AsyncReadExt::read_to_end(&mut io, &mut vec).await?;
-                    Ok(vec)
-                }
-                None => Ok(Vec::new()),
-            }
-        };
-
-        WaitWithOutput {
-            inner: futures_util::try_future::try_join3(stdout_fut, stderr_fut, self)
-                .and_then(|(stdout, stderr, status)| {
-                    future::ok(Output {
-                        status,
-                        stdout,
-                        stderr,
-                    })
-                })
-                .boxed(),
+            Ok(vec)
         }
+
+        drop(self.stdin().take());
+        let stdout_fut = read_to_end(self.stdout.take());
+        let stderr_fut = read_to_end(self.stderr.take());
+
+        let (status, stdout, stderr) = try_join3(self, stdout_fut, stderr_fut).await?;
+
+        Ok(Output {
+            status,
+            stdout,
+            stderr,
+        })
     }
 
     /// Drop this `Child` without killing the underlying process.
@@ -767,76 +821,6 @@ impl Future for Child {
 
     fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
         Pin::new(&mut self.child).poll(cx)
-    }
-}
-
-/// Future returned from the [`Child::wait_with_output`] method.
-///
-/// This future will resolve to the standard library's `Output` type which
-/// contains the exit status, stdout, and stderr of a child process.
-#[must_use = "futures do nothing unless polled"]
-pub struct WaitWithOutput {
-    inner: Pin<Box<dyn Future<Output = io::Result<Output>> + Send>>,
-}
-
-impl fmt::Debug for WaitWithOutput {
-    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
-        fmt.debug_struct("WaitWithOutput")
-            .field("inner", &"..")
-            .finish()
-    }
-}
-
-impl Future for WaitWithOutput {
-    type Output = io::Result<Output>;
-
-    fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
-        Pin::new(&mut self.inner).poll(cx)
-    }
-}
-
-/// Future returned by the [`Command::status`] method.
-///
-/// This future is used to conveniently spawn a child and simply wait for its
-/// exit status. This future will resolves to the `ExitStatus` type in the
-/// standard library.
-#[must_use = "futures do nothing unless polled"]
-#[derive(Debug)]
-pub struct StatusAsync {
-    inner: Child,
-}
-
-impl Future for StatusAsync {
-    type Output = io::Result<ExitStatus>;
-
-    fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
-        Pin::new(&mut self.inner).poll(cx)
-    }
-}
-
-/// Future returned by the [`Command::output`] method.
-///
-/// This future is mostly equivalent to spawning a process and then calling
-/// `wait_with_output` on it internally. This can be useful to simply spawn a
-/// process, collecting all of its output and its exit status.
-#[must_use = "futures do nothing unless polled"]
-pub struct OutputAsync {
-    inner: Pin<Box<dyn Future<Output = io::Result<Output>> + Send>>,
-}
-
-impl fmt::Debug for OutputAsync {
-    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
-        fmt.debug_struct("OutputAsync")
-            .field("inner", &"..")
-            .finish()
-    }
-}
-
-impl Future for OutputAsync {
-    type Output = io::Result<Output>;
-
-    fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
-        Pin::new(&mut self.inner).poll(cx)
     }
 }
 

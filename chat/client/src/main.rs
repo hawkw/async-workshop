@@ -1,10 +1,11 @@
 use structopt::StructOpt;
 
-use futures::{stream, Stream, Sink, SinkExt, StreamExt, TryStream, TryStreamExt};
+use futures::prelude::*;
 use std::net::SocketAddr;
 use tokio::{
     codec::{FramedRead, FramedWrite, LinesCodec},
     net::TcpStream,
+    io,
 };
 
 #[derive(Debug, StructOpt)]
@@ -26,7 +27,7 @@ type Error = Box<dyn std::error::Error>;
 fn lines_from_conn(conn: TcpStream) -> (impl Stream<Item = Result<String, Error>>, impl Sink<String, Error = Error>) {
     // Split `conn` into a read half and a write half, implementing the
     // AsyncRead trait and the AsyncWrite trait, respectively.
-    let (read, write) = conn.split();
+    let (read, write) = io::split(conn);
 
     // `FramedRead` turns an `AsyncRead` into a `Stream` of _frames_ using a
     // codec. When we read from the stream, the codec will asynchronously read
@@ -53,8 +54,11 @@ enum Event {
     Input(String),
 }
 
+// The `tokio::main` attribute allows us to use an `async fn` as `main()`.
+// Behind the scenes, the attribute handles setting up a tokio runtime & running
+// the provided async function on that runtime until it completes.
 #[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
+async fn main() -> Result<(), Error> {
     // Parse command line options.
     let Options { server, user } = Options::from_args();
 

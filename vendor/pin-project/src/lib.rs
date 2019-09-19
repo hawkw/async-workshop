@@ -1,0 +1,195 @@
+//! A crate for safe and ergonomic pin-projection.
+//!
+//! This crate provides the following attribute macros:
+//!
+//! * [`pin_project`] - An attribute that creates a projection struct covering all the fields.
+//! * [`pinned_drop`] - An attribute for annotating a function that implements `Drop`.
+//! * [`project`] - An attribute to support pattern matching.
+//!
+//! ## Examples
+//!
+//! [`pin_project`] attribute creates a projection struct covering all the fields.
+//!
+//! ```rust
+//! use pin_project::pin_project;
+//! use std::pin::Pin;
+//!
+//! #[pin_project]
+//! struct Struct<T, U> {
+//!     #[pin]
+//!     pinned: T,
+//!     unpinned: U,
+//! }
+//!
+//! impl<T, U> Struct<T, U> {
+//!     fn foo(mut self: Pin<&mut Self>) {
+//!         let this = self.project();
+//!         let _: Pin<&mut T> = this.pinned; // Pinned reference to the field
+//!         let _: &mut U = this.unpinned; // Normal reference to the field
+//!     }
+//! }
+//! ```
+//!
+//! [Code like this will be generated](https://github.com/taiki-e/pin-project/blob/master/examples/struct-default-expanded.rs)
+//!
+//! There are examples and generated code of each feature in [examples](https://github.com/taiki-e/pin-project/blob/master/examples/README.md) directory.
+//!
+//! [`pin_project`]: https://docs.rs/pin-project-internal/0.4.0-alpha.11/pin_project_internal/attr.pin_project.html
+//! [`pinned_drop`]: https://docs.rs/pin-project-internal/0.4.0-alpha.11/pin_project_internal/attr.pinned_drop.html
+//! [`project`]: https://docs.rs/pin-project-internal/0.4.0-alpha.11/pin_project_internal/attr.project.html
+
+#![no_std]
+#![recursion_limit = "256"]
+#![doc(html_root_url = "https://docs.rs/pin-project/0.4.0-alpha.11")]
+#![doc(test(
+    no_crate_inject,
+    attr(deny(warnings, rust_2018_idioms, single_use_lifetimes), allow(dead_code))
+))]
+#![warn(missing_docs)]
+#![warn(unsafe_code)]
+#![warn(rust_2018_idioms, unreachable_pub, single_use_lifetimes)]
+#![warn(clippy::all, clippy::pedantic)]
+#![allow(clippy::use_self)]
+
+#[doc(hidden)]
+pub use pin_project_internal::pin_project;
+
+#[doc(hidden)]
+pub use pin_project_internal::pinned_drop;
+
+#[cfg(feature = "project_attr")]
+#[doc(hidden)]
+pub use pin_project_internal::project;
+
+/// A trait used for custom implementations of [`Unpin`].
+/// This trait is used in conjunction with the `UnsafeUnpin`
+/// argument to [`pin_project`]
+///
+/// The Rust [`Unpin`] trait is safe to implement - by itself,
+/// implementing it cannot lead to undefined behavior. Undefined
+/// behavior can only occur when other unsafe code is used.
+///
+/// It turns out that using pin projections, which requires unsafe code,
+/// imposes additional requirements on an [`Unpin`] impl. Normally, all of this
+/// unsafety is contained within this crate, ensuring that it's impossible for
+/// you to violate any of the guarnatees required by pin projection.
+///
+/// However, things change if you want to provide a custom [`Unpin`] impl
+/// for your `#[pin_project]` type. As stated in [the Rust
+/// documentation](https://doc.rust-lang.org/beta/std/pin/index.html#projections-and-structural-pinning),
+/// you must be sure to only implement [`Unpin`] when all of your `#[pin]` fields (i.e. struturally
+/// pinend fields) are also [`Unpin`].
+///
+/// To help highlight this unsafety, the `UnsafeUnpin` trait is provided.
+/// Implementing this trait is logically equivalent to implemnting [`Unpin`] -
+/// this crate will generate an [`Unpin`] impl for your type that 'forwards' to
+/// your `UnsafeUnpin` impl. However, this trait is `unsafe` - since your type
+/// uses structural pinning (otherwise, you wouldn't be using this crate!),
+/// you must be sure that your `UnsafeUnpin` impls follows all of
+/// the requirements for an [`Unpin`] impl of a structurally-pinned type.
+///
+/// Note that if you specify `#[pin_project(UnsafeUnpin)]`, but do *not*
+/// provide an impl of `UnsafeUnpin`, your type will never implement [`Unpin`].
+/// This is effectly the same thing as adding a [`PhantomPinned`] to your type
+///
+/// Since this trait is `unsafe`, impls of it will be detected by the `unsafe_code` lint,
+/// and by tools like `cargo geiger`.
+///
+/// ## Examples
+///
+/// An `UnsafeUnpin` impl which, in addition to requiring that structually pinned
+/// fields be [`Unpin`], imposes an additional requirement:
+///
+/// ```rust
+/// use pin_project::{pin_project, UnsafeUnpin};
+///
+/// #[pin_project(UnsafeUnpin)]
+/// struct Foo<K, V> {
+///     #[pin]
+///     field_1: K,
+///     field_2: V
+/// }
+///
+/// unsafe impl<K, V> UnsafeUnpin for Foo<K, V> where K: Unpin + Clone {}
+/// ```
+///
+/// [`PhantomPinned`]: core::marker::PhantomPinned
+/// [`pin_project`]: https://docs.rs/pin-project-internal/0.4.0-alpha.11/pin_project_internal/attr.pin_project.html
+#[allow(unsafe_code)]
+pub unsafe trait UnsafeUnpin {}
+
+// Not public API.
+#[doc(hidden)]
+pub mod __private {
+    use super::UnsafeUnpin;
+    use core::pin::Pin;
+
+    #[doc(hidden)]
+    pub use pin_project_internal::__PinProjectAutoImplUnpin;
+
+    // This is an internal helper trait used by `pin-project-internal`.
+    // This allows us to force an error if the user tries to provide
+    // a regular `Drop` impl when they specify the `PinnedDrop` argument.
+    //
+    // Users can implement `Drop` safely using `#[pinned_drop]`.
+    // **Do not call or implement this trait directly.**
+    #[allow(unsafe_code)]
+    #[doc(hidden)]
+    pub unsafe trait UnsafePinnedDrop {
+        // Since calling it twice on the same object would be UB,
+        // this method is unsafe.
+        #[doc(hidden)]
+        unsafe fn drop(self: Pin<&mut Self>);
+    }
+
+    // This is an internal helper struct used by `pin-project-internal`.
+    // This allows us to force an error if the user tries to provide
+    // a regular `Unpin` impl when they specify the `UnsafeUnpin` argument.
+    // This is why we need Wrapper:
+    //
+    // Supposed we have the following code:
+    //
+    // #[pin_project(UnsafeUnpin)]
+    // struct MyStruct<T> {
+    //     #[pin] field: T
+    // }
+    //
+    // impl<T> Unpin for MyStruct<T> where MyStruct<T>: UnsafeUnpin {} // generated by pin-project-internal
+    // impl<T> Unpin for MyStruct<T> where T: Copy // written by the user
+    //
+    // We want this code to be rejected - the user is completely bypassing `UnsafeUnpin`,
+    // and providing an unsound Unpin impl in safe code!
+    //
+    // Unfortunately, the Rust compiler will accept the above code.
+    // Because MyStruct is declared in the same crate as the user-provided impl,
+    // the compiler will notice that 'MyStruct<T>: UnsafeUnpin' never holds.
+    //
+    // The solution is to introduce the 'Wrapper' struct, which is defined
+    // in the 'pin-project' crate.
+    //
+    // We now have code that looks like this:
+    //
+    // impl<T> Unpin for MyStruct<T> where Wrapper<MyStruct<T>>: UnsafeUnpin {} // generated by pin-project-internal
+    // impl<T> Unpin for MyStruct<T> where T: Copy // written by the user
+    //
+    // We also have 'unsafe impl<T> UnsafeUnpin for Wrapper<T> where T: UnsafeUnpin {}' in the
+    // 'pin-project' crate.
+    //
+    // Now, our generated impl has a bound involving a type defined in another crate - Wrapper.
+    // This will cause rust to conservatively assume that 'Wrapper<MyStruct<T>>: UnsafeUnpin'
+    // holds, in the interest of preserving forwards compatibility (in case such an impl is added
+    // for Wrapper<T> in a new version of the crate).
+    //
+    // This will cause rust to reject any other Unpin impls for MyStruct<T>, since it will
+    // assume that our generated impl could potentially apply in any situation.
+    //
+    // This acheives the desired effect - when the user writes `#[pin_project(UnsafeUnpin)]`,
+    // the user must either provide no impl of `UnsafeUnpin` (which is equivalent
+    // to making the type never implement Unpin), or provide an impl of `UnsafeUnpin`.
+    // It is impossible for them to provide an impl of `Unpin`
+    #[doc(hidden)]
+    pub struct Wrapper<T>(T);
+
+    #[allow(unsafe_code)]
+    unsafe impl<T> UnsafeUnpin for Wrapper<T> where T: UnsafeUnpin {}
+}

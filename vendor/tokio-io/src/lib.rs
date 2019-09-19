@@ -1,11 +1,15 @@
-#![doc(html_root_url = "https://docs.rs/tokio-io/0.2.0-alpha.4")]
+#![doc(html_root_url = "https://docs.rs/tokio-io/0.2.0-alpha.5")]
 #![warn(
     missing_debug_implementations,
     missing_docs,
     rust_2018_idioms,
     unreachable_pub
 )]
-#![doc(test(no_crate_inject, attr(deny(rust_2018_idioms))))]
+#![deny(intra_doc_link_resolution_failure)]
+#![doc(test(
+    no_crate_inject,
+    attr(deny(warnings, rust_2018_idioms), allow(dead_code, unused_variables))
+))]
 
 //! Core I/O traits and combinators when working with Tokio.
 //!
@@ -22,12 +26,15 @@ mod async_write;
 #[cfg(feature = "util")]
 mod io;
 
+#[cfg(feature = "util")]
+pub mod split;
+
 pub use self::async_buf_read::AsyncBufRead;
 pub use self::async_read::AsyncRead;
 pub use self::async_write::AsyncWrite;
 
 #[cfg(feature = "util")]
-pub use self::io::{AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufReader, BufWriter};
+pub use self::io::{AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufReader, BufStream, BufWriter};
 
 // Re-export `Buf` and `BufMut` since they are part of the API
 pub use bytes::{Buf, BufMut};

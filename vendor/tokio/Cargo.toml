@@ -13,11 +13,11 @@
 [package]
 edition = "2018"
 name = "tokio"
-version = "0.2.0-alpha.4"
+version = "0.2.0-alpha.5"
 authors = ["Tokio Contributors <team@tokio.rs>"]
 description = "An event-driven, non-blocking I/O platform for writing asynchronous I/O\nbacked applications.\n"
 homepage = "https://tokio.rs"
-documentation = "https://docs.rs/tokio/0.2.0-alpha.4/tokio/"
+documentation = "https://docs.rs/tokio/0.2.0-alpha.5/tokio/"
 readme = "README.md"
 keywords = ["io", "async", "non-blocking", "futures"]
 categories = ["asynchronous", "network-programming"]
@@ -44,38 +44,38 @@ version = "1.8.0"
 optional = true
 
 [dependencies.tokio-codec]
-version = "=0.2.0-alpha.4"
+version = "=0.2.0-alpha.5"
 optional = true
 
 [dependencies.tokio-executor]
-version = "=0.2.0-alpha.4"
+version = "=0.2.0-alpha.5"
 optional = true
 
 [dependencies.tokio-fs]
-version = "=0.2.0-alpha.4"
+version = "=0.2.0-alpha.5"
 optional = true
 
 [dependencies.tokio-io]
-version = "=0.2.0-alpha.4"
+version = "=0.2.0-alpha.5"
 features = ["util"]
 optional = true
 
 [dependencies.tokio-macros]
-version = "=0.2.0-alpha.4"
+version = "=0.2.0-alpha.5"
 optional = true
 
 [dependencies.tokio-net]
-version = "=0.2.0-alpha.4"
+version = "=0.2.0-alpha.5"
 features = ["async-traits"]
 optional = true
 
 [dependencies.tokio-sync]
-version = "=0.2.0-alpha.4"
+version = "=0.2.0-alpha.5"
 features = ["async-traits"]
 optional = true
 
 [dependencies.tokio-timer]
-version = "=0.3.0-alpha.4"
+version = "=0.3.0-alpha.5"
 features = ["async-traits"]
 optional = true
 
@@ -98,11 +98,11 @@ tracing = ["tracing-core"]
 udp = ["io", "tokio-net/udp"]
 uds = ["io", "tokio-net/uds"]
 [target."cfg(feature = \"tracing\")".dependencies.tokio-executor]
-version = "=0.2.0-alpha.4"
+version = "=0.2.0-alpha.5"
 features = ["tracing"]
 optional = true
 
 [target."cfg(feature = \"tracing\")".dependencies.tokio-net]
-version = "=0.2.0-alpha.4"
+version = "=0.2.0-alpha.5"
 features = ["tracing", "async-traits"]
 optional = true

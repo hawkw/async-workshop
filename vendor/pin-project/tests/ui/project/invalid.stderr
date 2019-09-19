@@ -1,0 +1,8 @@
+error: unexpected token
+  --> $DIR/invalid.rs:14:14
+   |
+14 |     #[project(foo)] //~ ERROR unexpected token
+   |              ^
+
+error: aborting due to previous error
+

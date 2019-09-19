@@ -4,9 +4,9 @@ use tokio::{
     io::AsyncWrite,
 };
 
-use futures::{Sink, SinkExt, StreamExt};
 use tracing::{debug, trace};
 use std::fmt;
+use futures::prelude::*;
 
 pub struct Forward {
     rx: mpsc::UnboundedReceiver<String>,

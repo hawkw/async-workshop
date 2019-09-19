@@ -1,11 +1,15 @@
-#![doc(html_root_url = "https://docs.rs/tokio-macros/0.2.0-alpha.4")]
+#![doc(html_root_url = "https://docs.rs/tokio-macros/0.2.0-alpha.5")]
 #![warn(
     missing_debug_implementations,
     missing_docs,
     rust_2018_idioms,
     unreachable_pub
 )]
-#![doc(test(no_crate_inject, attr(deny(rust_2018_idioms))))]
+#![deny(intra_doc_link_resolution_failure)]
+#![doc(test(
+    no_crate_inject,
+    attr(deny(warnings, rust_2018_idioms), allow(dead_code, unused_variables))
+))]
 
 //! Macros for use with Tokio
 
