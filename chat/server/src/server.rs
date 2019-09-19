@@ -5,10 +5,9 @@ use tokio::{
     sync::Mutex,
 };
 
-use futures::StreamExt;
 use std::{collections::HashMap, net::SocketAddr, sync::Arc};
-use tracing::{debug, info, trace_span, warn};
-use tracing_futures::Instrument;
+use tracing::{debug, info, warn};
+use futures::prelude::*;
 
 use super::peer::{self, Peer};
 

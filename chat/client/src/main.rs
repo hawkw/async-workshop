@@ -1,6 +1,6 @@
 use structopt::StructOpt;
 
-use futures::{Stream, Sink, SinkExt, StreamExt, TryStream, TryStreamExt};
+use futures::prelude::*;
 use std::net::SocketAddr;
 use tokio::{
     codec::{FramedRead, FramedWrite, LinesCodec},
@@ -48,8 +48,11 @@ fn lines_from_stdin() -> impl Stream<Item = Result<String, Error>> {
     FramedRead::new(stdin, LinesCodec::new()).err_into()
 }
 
+// The `tokio::main` attribute allows us to use an `async fn` as `main()`.
+// Behind the scenes, the attribute handles setting up a tokio runtime & running
+// the provided async function on that runtime until it completes.
 #[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
+async fn main() -> Result<(), Error> {
     // Parse command line options.
     let Options { server, user } = Options::from_args();
 
