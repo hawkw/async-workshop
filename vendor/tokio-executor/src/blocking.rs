@@ -109,12 +109,18 @@ fn spawn_thread() {
                 shared.num_idle += 1;
 
                 loop {
-                    shared = POOL.condvar.wait_timeout(shared, KEEP_ALIVE).unwrap().0;
+                    let lock_result = POOL.condvar.wait_timeout(shared, KEEP_ALIVE).unwrap();
+                    shared = lock_result.0;
+                    let timeout_result = lock_result.1;
 
                     if let Some(task) = shared.queue.pop_front() {
                         drop(shared);
                         run_task(task);
                         continue 'outer;
+                    } else if timeout_result.timed_out() {
+                        shared.num_idle = shared.num_idle.saturating_sub(1);
+                        shared.num_th -= 1;
+                        break 'outer;
                     }
                 }
             }

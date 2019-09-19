@@ -1,3 +1,9 @@
+# v0.3.2 (2019-09-18)
+
+* `structopt` does not replace `:` with `, ` inside "author" strings while inside `<...>`.
+  Fixes [#156](https://github.com/TeXitoi/structopt/issues/156)
+* Introduced [`#[structopt(skip = expr)]` syntax](https://docs.rs/structopt/0.3.2/structopt/#skipping-fields).
+
 # v0.3.1 (2019-09-06)
 
 * Fix error messages ([#241](https://github.com/TeXitoi/structopt/issues/241))

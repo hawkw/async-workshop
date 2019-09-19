@@ -13,11 +13,11 @@
 [package]
 edition = "2018"
 name = "tokio-net"
-version = "0.2.0-alpha.4"
+version = "0.2.0-alpha.5"
 authors = ["Tokio Contributors <team@tokio.rs>"]
 description = "Event loop that drives Tokio I/O resources.\n"
 homepage = "https://tokio.rs"
-documentation = "https://docs.rs/tokio-net/0.2.0-alpha.4/tokio_net"
+documentation = "https://docs.rs/tokio-net/0.2.0-alpha.5/tokio_net"
 readme = "README.md"
 categories = ["asynchronous", "network-programming"]
 license = "MIT"
@@ -61,17 +61,17 @@ version = "0.9"
 version = "0.4.0"
 
 [dependencies.tokio-codec]
-version = "=0.2.0-alpha.4"
+version = "=0.2.0-alpha.5"
 
 [dependencies.tokio-executor]
-version = "=0.2.0-alpha.4"
+version = "=0.2.0-alpha.5"
 features = ["blocking"]
 
 [dependencies.tokio-io]
-version = "=0.2.0-alpha.4"
+version = "=0.2.0-alpha.5"
 
 [dependencies.tokio-sync]
-version = "=0.2.0-alpha.4"
+version = "=0.2.0-alpha.5"
 
 [dependencies.tracing]
 version = "0.1.5"
@@ -80,7 +80,7 @@ optional = true
 [features]
 async-traits = []
 log = ["tracing/log"]
-process = ["crossbeam-queue", "libc", "mio-named-pipes", "signal", "winapi/handleapi", "winapi/winerror", "winapi/minwindef", "winapi/processthreadsapi", "winapi/synchapi", "winapi/threadpoollegacyapiset", "winapi/winbase", "winapi/winnt"]
+process = ["tokio-io/util", "crossbeam-queue", "libc", "mio-named-pipes", "signal", "winapi/handleapi", "winapi/winerror", "winapi/minwindef", "winapi/processthreadsapi", "winapi/synchapi", "winapi/threadpoollegacyapiset", "winapi/winbase", "winapi/winnt"]
 signal = ["mio-uds", "libc", "signal-hook-registry", "winapi/consoleapi", "winapi/minwindef", "winapi/wincon"]
 tcp = ["bytes", "iovec"]
 udp = ["bytes", "futures-sink-preview"]

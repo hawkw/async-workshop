@@ -1,0 +1,49 @@
+parameters:
+  cmd: test
+
+jobs:
+- job: ${{ parameters.name }}
+  strategy:
+    matrix:
+      Linux:
+        vmImage: ubuntu-16.04
+      ${{ if parameters.cross }}:
+        MacOS:
+          vmImage: macOS-10.13
+        # Windows:
+        #   vmImage: vs2017-win2016
+  pool:
+    vmImage: $(vmImage)
+
+  steps:
+    - template: azure-install-rust.yml
+      parameters:
+        toolchain: ${{ parameters.toolchain }}
+
+    - ${{ if and(not(eq(parameters.toolchain, 'nightly')), not(eq(parameters.cmd, 'test'))) }}:
+      - script: |
+          cargo ${{ parameters.cmd }} --all
+          cargo ${{ parameters.cmd }} --all --all-features
+        displayName: cargo ${{ parameters.cmd }}
+
+    - ${{ if and(not(eq(parameters.toolchain, 'nightly')), eq(parameters.cmd, 'test')) }}:
+      - script: |
+          cargo ${{ parameters.cmd }} --all --tests
+          cargo ${{ parameters.cmd }} --all --all-features --tests
+        displayName: cargo ${{ parameters.cmd }}
+
+    - ${{ if eq(parameters.toolchain, 'nightly') }}:
+      - script: |
+          cargo ${{ parameters.cmd }} --all
+          cargo ${{ parameters.cmd }} --all --all-features
+        displayName: cargo ${{ parameters.cmd }}
+
+      - script: |
+          RUSTFLAGS='-Dwarnings -Zallow-features=proc_macro_hygiene,stmt_expr_attributes' cargo ${{ parameters.cmd }} --all --all-features
+        displayName: cargo ${{ parameters.cmd }} -Zallow-features
+
+      # Refs: https://github.com/rust-lang/cargo/issues/5657
+      - script: |
+          cargo update -Zminimal-versions
+          cargo check --all --all-features
+        displayName: cargo check -Zminimal-versions

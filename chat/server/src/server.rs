@@ -1,11 +1,12 @@
 use tokio::{
     codec::{FramedRead, LinesCodec},
     net::TcpStream,
-    sync::Lock,
+    io,
+    sync::Mutex,
 };
 
 use futures::StreamExt;
-use std::{collections::HashMap, net::SocketAddr};
+use std::{collections::HashMap, net::SocketAddr, sync::Arc};
 use tracing::{debug, info, trace_span, warn};
 use tracing_futures::Instrument;
 
@@ -13,7 +14,7 @@ use super::peer::{self, Peer};
 
 #[derive(Debug, Clone)]
 pub struct Server {
-    peers: Lock<Peers>,
+    peers: Arc<Mutex<Peers>>,
 }
 
 type Peers = HashMap<SocketAddr, Peer>;
@@ -21,13 +22,13 @@ type Peers = HashMap<SocketAddr, Peer>;
 impl Server {
     pub fn new() -> Self {
         Self {
-            peers: Lock::new(Peers::new()),
+            peers: Arc::new(Mutex::new(Peers::new())),
         }
     }
 
-    pub async fn serve_connection(mut self, connection: TcpStream, addr: SocketAddr) {
+    pub async fn serve_connection(self, connection: TcpStream, addr: SocketAddr) {
         // Split the TcpStream into read and write halves.
-        let (read, write) = connection.split();
+        let (read, write) = io::split(connection);
         let mut read_lines = FramedRead::new(read, LinesCodec::new());
 
         // The first line recieved from the peer is that peer's username.
@@ -46,8 +47,8 @@ impl Server {
         };
 
         // Tell everyone that a new peer has joined the chat.
-        self.broadcast(addr, format!("{} ({}) joined the chat!", name, addr))
-            .await;
+        let msg = format!("{} ({}) joined the chat!", name, addr);
+        self.broadcast(addr, msg).await;
         debug!(peer.name = %name);
 
         // Insert the new peer into our map of peers,returning a handle that
@@ -66,11 +67,12 @@ impl Server {
         // When the stream ends, the peer has disconnected. Remove it from the
         // map and let everyone else know.
         self.remove_peer(addr).await;
-        self.broadcast(addr, format!("{} ({}) left the chat!", name, addr)).await;
+        let msg = format!("{} ({}) left the chat!", name, addr);
+        self.broadcast(addr, msg).await;
     }
 
     /// Add a new peer to the server, returning a task that will forward
-    async fn add_peer(&mut self, addr: SocketAddr) -> peer::Forward {
+    async fn add_peer(&self, addr: SocketAddr) -> peer::Forward {
         let (peer, forward) = Peer::new();
         let mut peers = self.peers.lock().await;
         peers.insert(addr, peer);
@@ -85,7 +87,7 @@ impl Server {
 
     /// Broadcast a message from the peer at address `from` to every other peer.
     #[tracing::instrument]
-    async fn broadcast(&mut self, from: SocketAddr, msg: String) {
+    async fn broadcast(&self, from: SocketAddr, msg: String) {
         debug!("broadcasting...");
 
         // Implement `broadcast` by sending the message to each other peer in

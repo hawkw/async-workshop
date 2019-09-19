@@ -13,11 +13,11 @@
 [package]
 edition = "2018"
 name = "tokio-io"
-version = "0.2.0-alpha.4"
+version = "0.2.0-alpha.5"
 authors = ["Tokio Contributors <team@tokio.rs>"]
 description = "Core I/O primitives for asynchronous I/O in Rust.\n"
 homepage = "https://tokio.rs"
-documentation = "https://docs.rs/tokio-io/0.2.0-alpha.4/tokio_io"
+documentation = "https://docs.rs/tokio-io/0.2.0-alpha.5/tokio_io"
 categories = ["asynchronous"]
 license = "MIT"
 repository = "https://github.com/tokio-rs/tokio"
@@ -35,6 +35,9 @@ version = "0.4"
 [dependencies.memchr]
 version = "2.2"
 optional = true
+
+[dependencies.pin-project]
+version = "=0.4.0-alpha.11"
 
 [dependencies.pin-utils]
 version = "=0.1.0-alpha.4"

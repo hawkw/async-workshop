@@ -13,11 +13,11 @@
 [package]
 edition = "2018"
 name = "tokio-macros"
-version = "0.2.0-alpha.4"
+version = "0.2.0-alpha.5"
 authors = ["Tokio Contributors <team@tokio.rs>"]
 description = "Tokio's proc macros.\n"
 homepage = "https://tokio.rs"
-documentation = "https://docs.rs/tokio-macros/0.2.0-alpha.4/tokio_macros"
+documentation = "https://docs.rs/tokio-macros/0.2.0-alpha.5/tokio_macros"
 categories = ["asynchronous"]
 license = "MIT"
 repository = "https://github.com/tokio-rs/tokio"

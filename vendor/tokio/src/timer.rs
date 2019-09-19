@@ -30,10 +30,9 @@
 //! Wait 100ms and print "Hello World!"
 //!
 //! ```
-//! use tokio::prelude::*;
 //! use tokio::timer::delay;
 //!
-//! use std::time::{Duration, Instant};
+//! use std::time::Duration;
 //!
 //!
 //! #[tokio::main]
@@ -75,4 +74,6 @@
 //! [Interval]: struct.Interval.html
 //! [`DelayQueue`]: struct.DelayQueue.html
 
-pub use tokio_timer::{delay, delay_queue, timeout, Delay, DelayQueue, Error, Interval, Timeout};
+pub use tokio_timer::{
+    delay, delay_for, delay_queue, timeout, Delay, DelayQueue, Error, Interval, Timeout,
+};

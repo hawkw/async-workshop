@@ -5,6 +5,7 @@ use std::net::SocketAddr;
 use tokio::{
     codec::{FramedRead, FramedWrite, LinesCodec},
     net::TcpStream,
+    io,
 };
 
 #[derive(Debug, StructOpt)]
@@ -26,7 +27,7 @@ type Error = Box<dyn std::error::Error>;
 fn lines_from_conn(conn: TcpStream) -> (impl Stream<Item = Result<String, Error>>, impl Sink<String, Error = Error>) {
     // Split `conn` into a read half and a write half, implementing the
     // AsyncRead trait and the AsyncWrite trait, respectively.
-    let (read, write) = conn.split();
+    let (read, write) = io::split(conn);
 
     // `FramedRead` turns an `AsyncRead` into a `Stream` of _frames_ using a
     // codec. When we read from the stream, the codec will asynchronously read

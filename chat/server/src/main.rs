@@ -8,7 +8,9 @@ use tracing_subscriber::{
     FmtSubscriber,
 };
 
-use chat::server;
+pub mod peer;
+pub mod server;
+
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let subscriber = FmtSubscriber::builder()

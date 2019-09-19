@@ -1,7 +1,4 @@
-use super::split::{
-    split, split_mut, TcpStreamReadHalf, TcpStreamReadHalfMut, TcpStreamWriteHalf,
-    TcpStreamWriteHalfMut,
-};
+use super::split::{split, ReadHalf, WriteHalf};
 use crate::driver::Handle;
 use crate::util::PollEvented;
 use crate::ToSocketAddrs;
@@ -273,14 +270,13 @@ impl TcpStream {
     ///
     /// ```no_run
     /// use tokio::net::TcpStream;
-    /// use tokio::prelude::*;
     /// use std::error::Error;
     /// use std::net::Shutdown;
     ///
     /// #[tokio::main]
     /// async fn main() -> Result<(), Box<dyn Error>> {
     ///     // Connect to a peer
-    ///     let mut stream = TcpStream::connect("127.0.0.1:8080").await?;
+    ///     let stream = TcpStream::connect("127.0.0.1:8080").await?;
     ///
     ///     // Shutdown the stream
     ///     stream.shutdown(Shutdown::Write)?;
@@ -584,17 +580,8 @@ impl TcpStream {
     ///
     /// See the module level documenation of [`split`](super::split) for more
     /// details.
-    pub fn split(self) -> (TcpStreamReadHalf, TcpStreamWriteHalf) {
+    pub fn split(&mut self) -> (ReadHalf<'_>, WriteHalf<'_>) {
         split(self)
-    }
-
-    /// Split a `TcpStream` into a read half and a write half, which can be used
-    /// to read and write the stream concurrently.
-    ///
-    /// See the module level documenation of [`split`](super::split) for more
-    /// details.
-    pub fn split_mut(&mut self) -> (TcpStreamReadHalfMut<'_>, TcpStreamWriteHalfMut<'_>) {
-        split_mut(self)
     }
 
     // == Poll IO functions that takes `&self` ==
