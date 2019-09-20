@@ -1,0 +1,14 @@
+[alias]
+client = "run --package client --"
+server = "run --package server --"
+
+# [source.crates-io]
+# replace-with = "vendored-sources"
+
+# [source."https://github.com/tokio-rs/tracing"]
+# git = "https://github.com/tokio-rs/tracing"
+# rev = "9f1126a00d105ff85f5b65fc6457699430b1bed4"
+# replace-with = "vendored-sources"
+
+# [source.vendored-sources]
+# directory = "/Users/eliza/Code/async-training/vendor"
