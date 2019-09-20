@@ -31,5 +31,5 @@ async fn main() -> Result<(), client::Error> {
     let conn = TcpStream::connect(server).await?;
     println!("connected to {}", server);
 
-    client::run_client(conn).await;
+    client::run_client(user, conn).await;
 }

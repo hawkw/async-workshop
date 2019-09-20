@@ -7,7 +7,7 @@ use tokio::{
 
 pub type Error = Box<dyn std::error::Error>;
 
-pub async fn run_client(mut stream: TcpStream) -> Result<(), Error> {
+pub async fn run_client(user: String, mut stream: TcpStream) -> Result<(), Error> {
     #[derive(Debug)]
     enum Event {
         Received(String),
@@ -17,9 +17,6 @@ pub async fn run_client(mut stream: TcpStream) -> Result<(), Error> {
     // Split the raw `TcpStream` of bytes into a `Stream` of received lines and
     // a sink that we can write lines to send to.
     let (recv_lines, mut send_lines) = lines_from_conn(conn);
-
-    // Start by sending the server our username.
-    send_lines.send(user).await?;
 
     // Start by sending the server our username.
     send_lines.send(user).await?;
