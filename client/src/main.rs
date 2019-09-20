@@ -4,7 +4,7 @@ use tokio::net::TcpStream;
 
 // Comment out or remove the `path` attribute when you're ready to start
 // implementing the client!
-#[path = "../solutions/server.rs"]
+#[path = "../solutions/client.rs"]
 mod client;
 
 #[derive(Debug, StructOpt)]
@@ -31,5 +31,5 @@ async fn main() -> Result<(), client::Error> {
     let conn = TcpStream::connect(server).await?;
     println!("connected to {}", server);
 
-    client::run_client(conn).await;
+    client::run_client(user, conn).await
 }
