@@ -9,9 +9,12 @@ publish = false
 [dependencies]
 tokio = "0.2.0-alpha.5"
 
+
 tracing = "0.1"
 tracing-futures = { git = "https://github.com/tokio-rs/tracing", rev = "9f1126a00d105ff85f5b65fc6457699430b1bed4", features = ["tokio-alpha"]}
 tracing-subscriber = "0.1.2"
 
 futures-preview = "=0.3.0-alpha.18"
 futures-util-preview = "=0.3.0-alpha.18"
+
+structopt = "0.3"

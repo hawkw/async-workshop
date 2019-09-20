@@ -1,2 +1,2 @@
 [workspace]
-members = ["chat/client", "chat/server"]
+members = ["client", "server"]

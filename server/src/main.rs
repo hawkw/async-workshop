@@ -1,4 +1,5 @@
 use std::net::SocketAddr;
+use structopt::StructOpt;
 
 use tokio::net::TcpListener;
 use tracing::{info, trace_span};
@@ -10,6 +11,14 @@ use tracing_subscriber::{
 
 mod peer;
 mod server;
+
+#[derive(Debug, StructOpt)]
+#[structopt(name = "server", about = "an asynchronous chat swerver")]
+struct Options {
+    /// The address to serve on
+    #[structopt(short, long, default_value = "127.0.0.1:7000")]
+    addr: SocketAddr,
+}
 
 /// Tracing is a framework for adding structured, async-aware instrumentation
 /// to Rust programs. This method sets up a tracing `Subscriber` to log traces
@@ -28,18 +37,23 @@ fn init_tracing() -> Result<(), Box<dyn std::error::Error>> {
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     init_tracing()?;
 
-    let addr = "127.0.0.1:7000".parse::<SocketAddr>()?;
+    // Parse command line options and bind a socket on the provided address.
+    let Options { addr } = Options::from_args();
+
     let mut listener = TcpListener::bind(addr).await?;
     info!(local.addr = %addr, "listening on");
 
-    let server = Server::new();
+    let server = server::Server::new();
 
     loop {
         let (socket, addr) = listener.accept().await?;
+        // Clone `Arc` on the shared server state for each connection.
+        let server = server.clone();
+        // Call the `serve_connection` async method on server, returning a future.
         let serve = server
-            .clone()
             .serve_connection(socket, addr)
             .instrument(trace_span!("serve", peer.addr = %addr));
+        // Spawn the future for that connection onto the `tokio` runtime.
         tokio::spawn(serve);
     }
 }

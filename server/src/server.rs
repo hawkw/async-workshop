@@ -6,7 +6,8 @@ use tokio::{
 };
 
 use std::{collections::HashMap, net::SocketAddr, sync::Arc};
-use tracing::{debug, info, warn};
+use tracing::{debug, info, warn, trace_span};
+use tracing_futures::Instrument;
 use futures::prelude::*;
 
 use super::peer::{self, Peer};
@@ -86,7 +87,7 @@ impl Server {
     }
 
     /// Remove a peer from the server.
-    async fn remove_peer(&mut self, addr: SocketAddr) {
+    async fn remove_peer(&self, addr: SocketAddr) {
         let mut peers = self.peers.lock().await;
         peers.remove(&addr);
     }
