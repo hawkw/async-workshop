@@ -9,7 +9,11 @@ use tracing_subscriber::{
     FmtSubscriber,
 };
 
+// Comment out these `path` attributes when you're ready to work on your own
+// implementation!
+#[path = "../solutions/peer.rs"]
 mod peer;
+#[path = "../solutions/server.rs"]
 mod server;
 
 #[derive(Debug, StructOpt)]
