@@ -31,6 +31,15 @@ Here's an overview of the protocol we're implementing:
 
 ## exercises
 
+### workflow
+
+I've included solutions for both exercises in the repository. In each exercise,
+several modules contain unimplemented code which you'll be writing over the
+course of the workshop. There are `#[path="..."]` attributes which you can
+comment out to switch from the solution to your own code. This means that you
+can run the completed version of the exercise, or in some cases, implement the
+exercise one example at a time.
+
 ### part 1: implementing the client
 
 To dip our toes into async networking with tokio, we'll start by implementing a
@@ -74,9 +83,14 @@ Good luck!
 ### part 2: implementing the server
 
 Once you've gotten the client working, we'll move on to implementing the server.
-Again, I've provided a skeleton for you to build on top of.
+Again, I've provided a skeleton for you to build on top of. The server is split
+into a couple of files, and contains a few functions that are unimplemented.
+Your job is to implement these.
 
-TODO(ELIZA) FINISH THIS PART
+Like the client, you can run the server using
+```bash
+cargo server
+```
 
 ### bonus: making it fancier
 
@@ -152,11 +166,3 @@ to consider:
 Many of these are hard problems without simple solutions, but thinking about
 them — and maybe solving one or two — could be both fun and a valuable learning
 experience.
-
-## workflow & debugging
-
-TODO(ELIZA) FINISH THIS PART
-
-## getting to know the crates
-
-TODO(ELIZA) FINISH THIS PART
