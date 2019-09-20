@@ -16,10 +16,10 @@ pub async fn run_client(user: String, mut stream: TcpStream) -> Result<(), Error
 
     // Split the raw `TcpStream` of bytes into a `Stream` of received lines and
     // a sink that we can write lines to send to.
-    let (recv_lines, mut send_lines) = lines_from_conn(conn);
+    let (recv_lines, mut send_lines) = lines_from_conn(stream);
 
     // Start by sending the server our username.
-    send_lines.send(user).await?;
+    send_lines.send(user.clone()).await?;
 
     let stdin_lines = lines_from_stdin().map_ok(Event::Input);
     let recv_lines = recv_lines.map_ok(Event::Received);

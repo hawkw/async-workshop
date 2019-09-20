@@ -4,7 +4,7 @@ use tokio::net::TcpStream;
 
 // Comment out or remove the `path` attribute when you're ready to start
 // implementing the client!
-#[path = "../solutions/server.rs"]
+#[path = "../solutions/client.rs"]
 mod client;
 
 #[derive(Debug, StructOpt)]
